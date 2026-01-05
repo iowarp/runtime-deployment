@@ -110,7 +110,7 @@ class ResourceGraphManager:
                     )
                 
                 # Build command string
-                cmd_parts = ['/mnt/home/Projects/iowarp/ppi-jarvis-cd/bin/jarvis_resource_graph']
+                cmd_parts = ['jarvis_resource_graph']
                 if not benchmark:
                     cmd_parts.append('--no-benchmark')
                 if duration != 25:
