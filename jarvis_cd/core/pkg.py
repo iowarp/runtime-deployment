@@ -114,9 +114,6 @@ class Pkg:
         # Note: Directories will be initialized by Pipeline._load_package_instance
         # after pkg_id is set, or by user code for standalone packages
 
-        # Call user-defined initialization
-        self._init()
-
         # Set pkg_dir to the directory containing this package's source
         self._detect_pkg_dir()
 
@@ -394,9 +391,12 @@ class Pkg:
 
             # Create directories if they don't exist
             for dir_path in [self.config_dir, self.shared_dir, self.private_dir]:
-                if dir_path:
+                if dir_path and not Path(dir_path).exists():
                     Path(dir_path).mkdir(parents=True, exist_ok=True)
-                    
+            
+            # Call user-defined initialization
+            self._init()
+    
     def _detect_pkg_dir(self):
         """
         Detect the directory containing this package's source code (where pkg.py is located).
