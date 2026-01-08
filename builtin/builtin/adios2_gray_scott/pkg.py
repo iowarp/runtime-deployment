@@ -5,7 +5,7 @@ substances.
 """
 from jarvis_cd.core.pkg import Application
 from jarvis_cd.shell import Exec, MpiExecInfo, PsshExecInfo
-from jarvis_cd.shell.process import Mkdir, Rm, JsonFile
+from jarvis_cd.shell.process import Mkdir, Rm
 import pathlib
 import os
 
