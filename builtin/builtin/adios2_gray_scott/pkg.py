@@ -5,6 +5,7 @@ substances.
 """
 from jarvis_cd.core.pkg import Application
 import pathlib
+import os
 
 
 class Adios2GrayScott(Application):

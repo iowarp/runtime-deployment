@@ -607,12 +607,13 @@ class Pipeline:
             traceback.print_exc()
             raise
     
-    def append(self, package_spec: str, package_alias: Optional[str] = None):
+    def append(self, package_spec: str, package_alias: Optional[str] = None, config_args: Optional[List[str]] = None):
         """
         Append a package to the pipeline.
-        
+
         :param package_spec: Package specification (repo.pkg or just pkg)
         :param package_alias: Optional alias for the package
+        :param config_args: Optional configuration arguments as command-line args (e.g., ['--out_file=/path', 'nprocs=4'])
         """
         if not self.name:
             raise ValueError("No pipeline loaded. Create one with create() first")
@@ -641,11 +642,8 @@ class Pipeline:
             
         # Get default configuration from package
         default_config = self._get_package_default_config(package_spec)
-        
-        # Validate that all required parameters have values
-        self._validate_required_config(package_spec, default_config)
-        
-        # Add package to pipeline
+
+        # Build the package entry (needed for loading package instance)
         package_entry = {
             'pkg_type': package_spec,
             'pkg_id': pkg_id,
@@ -653,12 +651,36 @@ class Pipeline:
             'global_id': f"{self.name}.{pkg_id}",
             'config': default_config
         }
-        
+
+        # Apply configuration arguments if provided (before validation)
+        if config_args:
+            # Load package instance
+            pkg_instance = self._load_package_instance(package_entry, self.env)
+
+            try:
+                # Use PkgArgParse to parse and convert arguments
+                argparse = pkg_instance.get_argparse()
+                # Parse arguments - prepend 'configure' command
+                argparse.parse(['configure'] + config_args)
+                converted_args = argparse.kwargs
+
+                # Update package configuration with converted values
+                package_entry['config'].update(converted_args)
+            except Exception as e:
+                print(f"Warning: Error parsing configuration arguments: {e}")
+                # Show available configuration options
+                argparse = pkg_instance.get_argparse()
+                argparse.print_help('configure')
+
+        # Validate that all required parameters have values (after applying config_args)
+        self._validate_required_config(package_spec, package_entry['config'])
+
+        # Add package to pipeline
         self.packages.append(package_entry)
-        
+
         # Save updated configuration
         self.save()
-            
+
         print(f"Added package {package_spec} as {pkg_id} to pipeline")
     
     def rm(self, package_spec: str):
