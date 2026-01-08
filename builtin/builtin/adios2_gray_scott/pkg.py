@@ -4,6 +4,8 @@ Gray Scott is a 3D 7-point stencil code for modeling the diffusion of two
 substances.
 """
 from jarvis_cd.core.pkg import Application
+from jarvis_cd.shell import Exec, MpiExecInfo, PsshExecInfo
+from jarvis_cd.shell.process import Mkdir, Rm, JsonFile
 import pathlib
 import os
 
