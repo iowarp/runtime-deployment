@@ -284,7 +284,7 @@ class Adios2GrayScott(Application):
         elif self.config['engine'].lower() in ['hermes', 'bp5', 'iowarp']:
 
             derived = 0
-            Exec(f'adios2-gray-scott {self.settings_json_path} {derived}',
+            Exec(f'gray-scott {self.settings_json_path} {derived}',
                  MpiExecInfo(nprocs=self.config['nprocs'],
                              ppn=self.config['ppn'],
                              hostfile=self.hostfile,
