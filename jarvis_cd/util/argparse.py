@@ -454,6 +454,9 @@ class ArgParse:
                             self.kwargs[arg_spec['name']] = self._parse_list_value(value, arg_spec)
                         else:
                             self.kwargs[arg_spec['name']] = self._cast_value(value, arg_spec.get('type', str), arg_spec)
+                    elif keep_remainder:
+                        # Unknown argument but keep_remainder is True - add to remainder
+                        self.remainder.append(arg)
                     else:
                         # Unknown argument
                         self._print_param_error(f"Unknown argument '{key}'", cmd_name)
@@ -479,6 +482,16 @@ class ArgParse:
                         else:
                             # Missing value for argument
                             self._print_param_error(f"Argument '{key}' requires a value", cmd_name)
+                    elif keep_remainder:
+                        # Unknown argument but keep_remainder is True - add to remainder
+                        # Check if next arg looks like a value (doesn't start with -)
+                        if i + 1 < len(args) and not args[i + 1].startswith('-'):
+                            self.remainder.append(arg)
+                            self.remainder.append(args[i + 1])
+                            i += 2
+                        else:
+                            self.remainder.append(arg)
+                            i += 1
                     else:
                         # Unknown argument
                         self._print_param_error(f"Unknown argument '{key}'", cmd_name)

@@ -97,7 +97,7 @@ class JarvisCLI(ArgParse):
             }
         ])
         
-        self.add_cmd('ppl append', msg="Add a package to current pipeline", aliases=['ppl a'])
+        self.add_cmd('ppl append', msg="Add a package to current pipeline", aliases=['ppl a'], keep_remainder=True)
         self.add_args([
             {
                 'name': 'package_spec',
@@ -939,7 +939,7 @@ class JarvisCLI(ArgParse):
         self._ensure_initialized()
         package_spec = self.kwargs['package_spec']
         package_alias = self.kwargs.get('package_alias')
-        
+
         if not self.current_pipeline:
             # Try to load current pipeline
             current_name = self.jarvis_config.get_current_pipeline()
@@ -947,8 +947,10 @@ class JarvisCLI(ArgParse):
                 self.current_pipeline = Pipeline(current_name)
             else:
                 raise ValueError("No current pipeline. Create one with 'jarvis ppl create <name>'")
-        
-        self.current_pipeline.append(package_spec, package_alias)
+
+        # Pass remainder as config_args if any were provided
+        config_args = self.remainder if self.remainder else None
+        self.current_pipeline.append(package_spec, package_alias, config_args)
         
     def ppl_run(self):
         """Run pipeline"""
