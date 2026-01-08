@@ -41,7 +41,7 @@ class Lammps(Application):
             {
                 'name': 'engine',
                 'msg': 'Engine to be used',
-                'choices': ['bp4', 'hermes'],
+                'choices': ['bp4', 'hermes', 'iowarp'],
                 'type': str,
                 'default': 'bp4',
             },
@@ -74,6 +74,10 @@ class Lammps(Application):
         elif  self.config['engine'].lower == 'hermes':
             replacement = [("ppn", self.config['ppn']), ("DB_FIEL", self.config['db_file'])]
             self.copy_template_file(f'{self.pkg_dir}/config/hermes.xml',
+                                    f'{self.config["script_location"]}/adios_config.xml', replacement)
+        elif self.config['engine'].lower() == 'iowarp':
+            replacement = [("ppn", self.config['ppn']), ("DB_FIEL", self.config['db_path'])]
+            self.copy_template_file(f'{self.pkg_dir}/config/iowarp.xml',
                                     f'{self.config["script_location"]}/adios_config.xml', replacement)
         else:
             raise Exception('Engine not defined')

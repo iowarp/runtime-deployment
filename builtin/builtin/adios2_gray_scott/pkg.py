@@ -152,7 +152,7 @@ class Adios2GrayScott(Application):
             {
                 'name': 'engine',
                 'msg': 'Engine to be used',
-                'choices': ['bp5', 'hermes', 'bp5_derived', 'hermes_derived'],
+                'choices': ['bp5', 'hermes', 'bp5_derived', 'hermes_derived', 'iowarp', 'iowarp_derived'],
                 'type': str,
                 'default': 'bp5',
             },
@@ -244,6 +244,20 @@ class Adios2GrayScott(Application):
                                     self.var_json_path)
             self.copy_template_file(f'{self.pkg_dir}/config/operator.yaml',
                                     self.operator_json_path)
+        elif self.config['engine'].lower() in ['iowarp', 'iowarp_derived']:
+            self.copy_template_file(f'{self.pkg_dir}/config/iowarp.xml',
+                                    self.adios2_xml_path,
+                                    replacements={
+                                        'PPN': self.config['ppn'],
+                                        'VARFILE': self.var_json_path,
+                                        'OPFILE': self.operator_json_path,
+                                        'DBFILE': self.config['db_path'],
+                                        'Order': self.config['Execution_order'],
+                                    })
+            self.copy_template_file(f'{self.pkg_dir}/config/var.yaml',
+                                    self.var_json_path)
+            self.copy_template_file(f'{self.pkg_dir}/config/operator.yaml',
+                                    self.operator_json_path)
         else:
             raise Exception('Engine not defined')
 
@@ -255,7 +269,7 @@ class Adios2GrayScott(Application):
         :return: None
         """
         # print(self.env['HERMES_CLIENT_CONF'])
-        if self.config['engine'].lower() in ['bp5_derived', 'hermes_derived']:
+        if self.config['engine'].lower() in ['bp5_derived', 'hermes_derived', 'iowarp_derived']:
             derived = 1
             Exec(f'adios2-gray-scott {self.settings_json_path} {derived}',
                  MpiExecInfo(nprocs=self.config['nprocs'],
@@ -263,7 +277,7 @@ class Adios2GrayScott(Application):
                              hostfile=self.hostfile,
                              env=self.mod_env
                              )).run()
-        elif self.config['engine'].lower() in ['hermes', 'bp5']:
+        elif self.config['engine'].lower() in ['hermes', 'bp5', 'iowarp']:
 
             derived = 0
             Exec(f'adios2-gray-scott {self.settings_json_path} {derived}',
