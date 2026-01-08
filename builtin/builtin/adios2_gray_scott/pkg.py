@@ -275,7 +275,7 @@ class Adios2GrayScott(Application):
         # print(self.env['HERMES_CLIENT_CONF'])
         if self.config['engine'].lower() in ['bp5_derived', 'hermes_derived', 'iowarp_derived']:
             derived = 1
-            Exec(f'adios2-gray-scott {self.settings_json_path} {derived}',
+            Exec(f'gray-scott {self.settings_json_path} {derived}',
                  MpiExecInfo(nprocs=self.config['nprocs'],
                              ppn=self.config['ppn'],
                              hostfile=self.hostfile,
