@@ -4,6 +4,9 @@ Gray Scott is a 3D 7-point stencil code for modeling the diffusion of two
 substances.
 """
 from jarvis_cd.core.pkg import Application
+from jarvis_cd.shell import Exec, MpiExecInfo, PsshExecInfo
+from jarvis_cd.shell.process import Mkdir, Rm
+from jarvis_cd.util.config_parser import JsonFile
 import pathlib
 import os
 
@@ -272,7 +275,7 @@ class Adios2GrayScott(Application):
         # print(self.env['HERMES_CLIENT_CONF'])
         if self.config['engine'].lower() in ['bp5_derived', 'hermes_derived', 'iowarp_derived']:
             derived = 1
-            Exec(f'adios2-gray-scott {self.settings_json_path} {derived}',
+            Exec(f'gray-scott {self.settings_json_path} {derived}',
                  MpiExecInfo(nprocs=self.config['nprocs'],
                              ppn=self.config['ppn'],
                              hostfile=self.hostfile,
@@ -281,7 +284,7 @@ class Adios2GrayScott(Application):
         elif self.config['engine'].lower() in ['hermes', 'bp5', 'iowarp']:
 
             derived = 0
-            Exec(f'adios2-gray-scott {self.settings_json_path} {derived}',
+            Exec(f'gray-scott {self.settings_json_path} {derived}',
                  MpiExecInfo(nprocs=self.config['nprocs'],
                              ppn=self.config['ppn'],
                              hostfile=self.hostfile,

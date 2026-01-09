@@ -5,6 +5,7 @@ Gadget2 is ....
 from jarvis_cd.core.pkg import Application
 from jarvis_cd.shell import Exec, LocalExecInfo, MpiExecInfo
 from jarvis_cd.shell.process import Mkdir, Rm
+from jarvis_cd.util.config_parser import YamlFile
 
 
 class Gadget2(Application):

@@ -506,11 +506,16 @@ class Jarvis:
         Returns the full import path if found.
         Searches repositories in order, respecting priority.
         """
-        # Check all registered repos in order (builtin is already in the list)
+        # Check all registered repos in order
         for repo_path in self.repos['repos']:
             repo_name = Path(repo_path).name
             if self._check_package_exists(repo_path, repo_name, pkg_name):
                 return f'{repo_name}.{pkg_name}'
+
+        # Also check the builtin repo (may not be in repos list)
+        builtin_path = self.get_builtin_repo_path()
+        if builtin_path and self._check_package_exists(str(builtin_path), 'builtin', pkg_name):
+            return f'builtin.{pkg_name}'
 
         return None
 
