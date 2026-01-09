@@ -23,6 +23,16 @@ class Adios2GrayScott(Application):
         self.settings_json_path = f'{self.shared_dir}/settings-files.json'
         self.var_json_path = f'{self.shared_dir}/var.json'
         self.operator_json_path = f'{self.shared_dir}/operator.json'
+        self.process = None  # Store process handle for async execution
+
+        # Ensure PATH is available for MPI detection
+        # This runs every time the package is loaded (including at start time)
+        import os
+        if 'PATH' not in self.env:
+            system_path = os.environ.get('PATH', '')
+            if system_path:
+                self.env['PATH'] = system_path
+                self.mod_env['PATH'] = system_path
 
     def _configure_menu(self):
         """
@@ -156,7 +166,7 @@ class Adios2GrayScott(Application):
             {
                 'name': 'engine',
                 'msg': 'Engine to be used',
-                'choices': ['bp5', 'hermes', 'bp5_derived', 'hermes_derived', 'iowarp', 'iowarp_derived'],
+                'choices': ['bp5', 'hermes', 'bp5_derived', 'hermes_derived', 'iowarp', 'iowarp_derived', 'sst'],
                 'type': str,
                 'default': 'bp5',
             },
@@ -184,6 +194,12 @@ class Adios2GrayScott(Application):
                 'type': str,
                 'default': '1',
             },
+            {
+                'name': 'run_async',
+                'msg': 'Run in background for parallel execution with consumer',
+                'type': bool,
+                'default': False,
+            },
 
         ]
 
@@ -197,6 +213,22 @@ class Adios2GrayScott(Application):
         :param kwargs: Configuration parameters for this pkg.
         :return: None
         """
+        # Ensure gray-scott binary location is in PATH
+        # This is needed for MPI execution to find the binary
+        import os
+        gray_scott_bin_dir = '/workspace/external/iowarp-gray-scott/build/bin'
+        if os.path.exists(gray_scott_bin_dir):
+            # If PATH doesn't exist in our env, initialize it from system PATH
+            if 'PATH' not in self.env:
+                system_path = os.environ.get('PATH', '')
+                if system_path:
+                    self.env['PATH'] = system_path
+                    self.mod_env['PATH'] = system_path
+                    print(f"[gray-scott] Initialized PATH from system: {system_path[:100]}...")
+            # Now prepend our bin directory
+            self.prepend_env('PATH', gray_scott_bin_dir)
+            print(f"[gray-scott] Final PATH: {self.mod_env.get('PATH', 'NOT SET')[:150]}...")
+
         if self.config['out_file'] is None:
             adios_dir = os.path.join(self.shared_dir, 'gray-scott-output')
             self.config['out_file'] = os.path.join(adios_dir,
@@ -233,6 +265,9 @@ class Adios2GrayScott(Application):
         print(f"Using engine {self.config['engine']}")
         if self.config['engine'].lower() in ['bp5', 'bp5_derived']:
             self.copy_template_file(f'{self.pkg_dir}/config/adios2.xml',
+                                self.adios2_xml_path)
+        elif self.config['engine'].lower() == 'sst':
+            self.copy_template_file(f'{self.pkg_dir}/config/sst.xml',
                                 self.adios2_xml_path)
         elif self.config['engine'].lower() in ['hermes', 'hermes_derived']:
             self.copy_template_file(f'{self.pkg_dir}/config/hermes.xml',
@@ -273,23 +308,37 @@ class Adios2GrayScott(Application):
         :return: None
         """
         # print(self.env['HERMES_CLIENT_CONF'])
+        print(f"[gray-scott start] PATH in mod_env: {self.mod_env.get('PATH', 'NOT SET')[:100]}...")
         if self.config['engine'].lower() in ['bp5_derived', 'hermes_derived', 'iowarp_derived']:
             derived = 1
-            Exec(f'gray-scott {self.settings_json_path} {derived}',
+            self.process = Exec(f'gray-scott {self.settings_json_path} {derived}',
                  MpiExecInfo(nprocs=self.config['nprocs'],
                              ppn=self.config['ppn'],
                              hostfile=self.hostfile,
-                             env=self.mod_env
-                             )).run()
-        elif self.config['engine'].lower() in ['hermes', 'bp5', 'iowarp']:
+                             env=self.mod_env,
+                             exec_async=self.config['run_async']
+                             ))
+            self.process.run()
+        elif self.config['engine'].lower() in ['hermes', 'bp5', 'iowarp', 'sst']:
 
             derived = 0
-            Exec(f'gray-scott {self.settings_json_path} {derived}',
+            self.process = Exec(f'gray-scott {self.settings_json_path} {derived}',
                  MpiExecInfo(nprocs=self.config['nprocs'],
                              ppn=self.config['ppn'],
                              hostfile=self.hostfile,
-                             env=self.mod_env)).run()
+                             env=self.mod_env,
+                             exec_async=self.config['run_async']))
+            self.process.run()
 
+
+    def wait(self):
+        """
+        Wait for async process to complete.
+
+        :return: None
+        """
+        if self.process:
+            self.process.wait_all()
 
     def stop(self):
         """
@@ -298,6 +347,12 @@ class Adios2GrayScott(Application):
 
         :return: None
         """
+        # If running async, wait for completion instead of killing
+        if self.config.get('run_async', False) and self.process:
+            print("Waiting for async gray-scott producer to complete...")
+            self.process.wait_all()
+        elif self.process:
+            self.process.kill_all()
         pass
 
     def clean(self):
