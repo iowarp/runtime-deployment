@@ -257,13 +257,14 @@ class MpiVersion(LocalExec):
 
     def __init__(self, exec_info: ExecInfo):
         self.cmd = 'mpiexec --version'
-        
+
         # Create modified exec_info for introspection
+        # CRITICAL: Must set exec_async=False to ensure we wait for output
         introspect_info = exec_info.mod(
             env=exec_info.basic_env,
             collect_output=True,
             hide_output=True,
-            do_dbg=False
+            exec_async=False
         )
         
         super().__init__(self.cmd, introspect_info)

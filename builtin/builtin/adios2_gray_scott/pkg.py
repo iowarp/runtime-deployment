@@ -25,15 +25,6 @@ class Adios2GrayScott(Application):
         self.operator_json_path = f'{self.shared_dir}/operator.json'
         self.process = None  # Store process handle for async execution
 
-        # Ensure PATH is available for MPI detection
-        # This runs every time the package is loaded (including at start time)
-        import os
-        if 'PATH' not in self.env:
-            system_path = os.environ.get('PATH', '')
-            if system_path:
-                self.env['PATH'] = system_path
-                self.mod_env['PATH'] = system_path
-
     def _configure_menu(self):
         """
         Create a CLI menu for the configurator method.
@@ -213,22 +204,6 @@ class Adios2GrayScott(Application):
         :param kwargs: Configuration parameters for this pkg.
         :return: None
         """
-        # Ensure gray-scott binary location is in PATH
-        # This is needed for MPI execution to find the binary
-        import os
-        gray_scott_bin_dir = '/workspace/external/iowarp-gray-scott/build/bin'
-        if os.path.exists(gray_scott_bin_dir):
-            # If PATH doesn't exist in our env, initialize it from system PATH
-            if 'PATH' not in self.env:
-                system_path = os.environ.get('PATH', '')
-                if system_path:
-                    self.env['PATH'] = system_path
-                    self.mod_env['PATH'] = system_path
-                    print(f"[gray-scott] Initialized PATH from system: {system_path[:100]}...")
-            # Now prepend our bin directory
-            self.prepend_env('PATH', gray_scott_bin_dir)
-            print(f"[gray-scott] Final PATH: {self.mod_env.get('PATH', 'NOT SET')[:150]}...")
-
         if self.config['out_file'] is None:
             adios_dir = os.path.join(self.shared_dir, 'gray-scott-output')
             self.config['out_file'] = os.path.join(adios_dir,
@@ -308,7 +283,6 @@ class Adios2GrayScott(Application):
         :return: None
         """
         # print(self.env['HERMES_CLIENT_CONF'])
-        print(f"[gray-scott start] PATH in mod_env: {self.mod_env.get('PATH', 'NOT SET')[:100]}...")
         if self.config['engine'].lower() in ['bp5_derived', 'hermes_derived', 'iowarp_derived']:
             derived = 1
             self.process = Exec(f'gray-scott {self.settings_json_path} {derived}',
