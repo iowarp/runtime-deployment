@@ -23,6 +23,7 @@ class Adios2GrayScott(Application):
         self.settings_json_path = f'{self.shared_dir}/settings-files.json'
         self.var_json_path = f'{self.shared_dir}/var.json'
         self.operator_json_path = f'{self.shared_dir}/operator.json'
+        self.process = None  # Store process handle for async execution
 
     def _configure_menu(self):
         """
@@ -156,7 +157,7 @@ class Adios2GrayScott(Application):
             {
                 'name': 'engine',
                 'msg': 'Engine to be used',
-                'choices': ['bp5', 'hermes', 'bp5_derived', 'hermes_derived', 'iowarp', 'iowarp_derived'],
+                'choices': ['bp5', 'hermes', 'bp5_derived', 'hermes_derived', 'iowarp', 'iowarp_derived', 'sst'],
                 'type': str,
                 'default': 'bp5',
             },
@@ -183,6 +184,12 @@ class Adios2GrayScott(Application):
                 'msg': 'Path where the bp5 will be stored',
                 'type': str,
                 'default': '1',
+            },
+            {
+                'name': 'run_async',
+                'msg': 'Run in background for parallel execution with consumer',
+                'type': bool,
+                'default': False,
             },
 
         ]
@@ -234,6 +241,9 @@ class Adios2GrayScott(Application):
         if self.config['engine'].lower() in ['bp5', 'bp5_derived']:
             self.copy_template_file(f'{self.pkg_dir}/config/adios2.xml',
                                 self.adios2_xml_path)
+        elif self.config['engine'].lower() == 'sst':
+            self.copy_template_file(f'{self.pkg_dir}/config/sst.xml',
+                                self.adios2_xml_path)
         elif self.config['engine'].lower() in ['hermes', 'hermes_derived']:
             self.copy_template_file(f'{self.pkg_dir}/config/hermes.xml',
                                     self.adios2_xml_path,
@@ -275,21 +285,34 @@ class Adios2GrayScott(Application):
         # print(self.env['HERMES_CLIENT_CONF'])
         if self.config['engine'].lower() in ['bp5_derived', 'hermes_derived', 'iowarp_derived']:
             derived = 1
-            Exec(f'gray-scott {self.settings_json_path} {derived}',
+            self.process = Exec(f'gray-scott {self.settings_json_path} {derived}',
                  MpiExecInfo(nprocs=self.config['nprocs'],
                              ppn=self.config['ppn'],
                              hostfile=self.hostfile,
-                             env=self.mod_env
-                             )).run()
-        elif self.config['engine'].lower() in ['hermes', 'bp5', 'iowarp']:
+                             env=self.mod_env,
+                             exec_async=self.config['run_async']
+                             ))
+            self.process.run()
+        elif self.config['engine'].lower() in ['hermes', 'bp5', 'iowarp', 'sst']:
 
             derived = 0
-            Exec(f'gray-scott {self.settings_json_path} {derived}',
+            self.process = Exec(f'gray-scott {self.settings_json_path} {derived}',
                  MpiExecInfo(nprocs=self.config['nprocs'],
                              ppn=self.config['ppn'],
                              hostfile=self.hostfile,
-                             env=self.mod_env)).run()
+                             env=self.mod_env,
+                             exec_async=self.config['run_async']))
+            self.process.run()
 
+
+    def wait(self):
+        """
+        Wait for async process to complete.
+
+        :return: None
+        """
+        if self.process:
+            self.process.wait_all()
 
     def stop(self):
         """
@@ -298,6 +321,12 @@ class Adios2GrayScott(Application):
 
         :return: None
         """
+        # If running async, wait for completion instead of killing
+        if self.config.get('run_async', False) and self.process:
+            print("Waiting for async gray-scott producer to complete...")
+            self.process.wait_all()
+        elif self.process:
+            self.process.kill_all()
         pass
 
     def clean(self):
